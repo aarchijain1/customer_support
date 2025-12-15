@@ -1,17 +1,45 @@
 # mcp_server/mock_data.py
 """
 Mock database for customer support system.
+Changes are now persistent - saved to a JSON file.
 In production, replace with actual database connections.
 """
 
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 import random
+import json
+import sys
+from pathlib import Path
 
 class MockDatabase:
     """Simulates a customer database with support operations."""
     
     def __init__(self):
+        self.data_file = Path(__file__).parent.parent / "database.json"
+        self.load_data()
+    
+    def _log(self, message: str):
+        """Log to stderr to avoid interfering with stdio MCP protocol."""
+        print(message, file=sys.stderr)
+    
+    def load_data(self):
+        """Load data from file if it exists, otherwise use defaults."""
+        if self.data_file.exists():
+            self._log(f"[DB] Loading data from {self.data_file}")
+            with open(self.data_file, 'r') as f:
+                data = json.load(f)
+                self.users = data.get('users', {})
+                self.transactions = data.get('transactions', {})
+                self.issues = data.get('issues', [])
+            self._log(f"[DB] Loaded {len(self.users)} users, {len(self.issues)} issues")
+        else:
+            self._log("[DB] No saved data found, using defaults")
+            self._initialize_default_data()
+            self.save_data()
+    
+    def _initialize_default_data(self):
+        """Initialize with default data."""
         self.users = {
             "user_001": {
                 "user_id": "user_001",
@@ -74,14 +102,27 @@ class MockDatabase:
         
         self.issues = []
     
+    def save_data(self):
+        """Save data to file for persistence."""
+        data = {
+            'users': self.users,
+            'transactions': self.transactions,
+            'issues': self.issues
+        }
+        with open(self.data_file, 'w') as f:
+            json.dump(data, f, indent=2)
+        self._log(f"[DB] ✓ Data saved to {self.data_file}")
+    
     def get_user(self, user_id: str) -> Optional[Dict]:
         """Get user by ID."""
         return self.users.get(user_id)
     
     def change_password(self, user_id: str, new_password: str) -> bool:
-        """Change user password."""
+        """Change user password - PERMANENT."""
         if user_id in self.users:
             self.users[user_id]["password"] = f"hashed_{new_password}"
+            self._log(f"[DB] Password changed for {user_id}")
+            self.save_data()
             return True
         return False
     
@@ -91,9 +132,14 @@ class MockDatabase:
         return user["account_balance"] if user else None
     
     def update_address(self, user_id: str, new_address: str) -> bool:
-        """Update user address."""
+        """Update user address - PERMANENT."""
         if user_id in self.users:
+            old_address = self.users[user_id]["address"]
             self.users[user_id]["address"] = new_address
+            self._log(f"[DB] Address changed for {user_id}")
+            self._log(f"     Old: {old_address}")
+            self._log(f"     New: {new_address}")
+            self.save_data()
             return True
         return False
     
@@ -102,14 +148,19 @@ class MockDatabase:
         return self.transactions.get(user_id, [])[:limit]
     
     def deactivate_card(self, user_id: str) -> bool:
-        """Deactivate user's card."""
+        """Deactivate user's card - PERMANENT."""
         if user_id in self.users:
+            old_status = self.users[user_id]["card_status"]
             self.users[user_id]["card_status"] = "deactivated"
+            self._log(f"[DB] Card status changed for {user_id}")
+            self._log(f"     Old: {old_status}")
+            self._log(f"     New: deactivated")
+            self.save_data()
             return True
         return False
     
     def report_issue(self, user_id: str, issue_description: str) -> str:
-        """Report a customer issue."""
+        """Report a customer issue - PERMANENT."""
         issue_id = f"issue_{len(self.issues) + 1:03d}"
         issue = {
             "issue_id": issue_id,
@@ -120,6 +171,8 @@ class MockDatabase:
             "priority": random.choice(["low", "medium", "high"])
         }
         self.issues.append(issue)
+        self._log(f"[DB] Issue created: {issue_id}")
+        self.save_data()
         return issue_id
     
     def get_account_details(self, user_id: str) -> Optional[Dict]:

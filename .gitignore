@@ -7,7 +7,7 @@
 
 # BUT allow .env.example (it has placeholders, not real keys)
 !.env.example
-
+database.json
 # Virtual environments
 venv/
 env/
