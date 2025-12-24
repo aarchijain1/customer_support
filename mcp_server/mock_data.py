@@ -189,6 +189,22 @@ class MockDatabase:
                 "card_number": user["card_number"]
             }
         return None
+    
+    def switch_user(self, new_user_id: str) -> Dict:
+        """Switch to a different user account."""
+        user = self.users.get(new_user_id)
+        if user:
+            self._log(f"[DB] Switching to user: {new_user_id}")
+            return {
+                "success": True,
+                "user_id": new_user_id,
+                "user_name": user["name"],
+                "message": f"Switched to user: {user['name']} ({new_user_id})"
+            }
+        return {
+            "success": False,
+            "message": f"User {new_user_id} not found. Available users: {', '.join(self.users.keys())}"
+        }
 
 # Global database instance
 db = MockDatabase()

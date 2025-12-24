@@ -1,7 +1,7 @@
 # run_fastmcp.py
 """
 Customer Support Agent using FastMCP server.
-This should work reliably on Windows.
+Includes persistent storage and user switching.
 """
 
 import sys
@@ -87,16 +87,28 @@ class FastMCPAgent:
     
     async def call_tool(self, tool_name: str, arguments: dict) -> str:
         """Call a tool through FastMCP."""
-        # Inject user_id
-        arguments["user_id"] = self.user_id
+        # Don't inject user_id for switch_user tool
+        if tool_name != "switch_user":
+            arguments["user_id"] = self.user_id
         
         logger.info(f"[FastMCP] Calling tool: {tool_name}")
         
         try:
             result = await self.session.call_tool(tool_name, arguments)
-            if result.content and len(result.content) > 0:
-                return result.content[0].text
-            return "{}"
+            result_text = result.content[0].text if result.content else "{}"
+            
+            # If switch_user was successful, update the agent's user_id
+            if tool_name == "switch_user":
+                import json
+                try:
+                    result_data = json.loads(result_text)
+                    if result_data.get("success"):
+                        self.user_id = result_data.get("user_id")
+                        logger.info(f"✓ User switched to: {self.user_id}")
+                except:
+                    pass
+            
+            return result_text
         except Exception as e:
             logger.error(f"Tool call failed: {e}")
             import json
@@ -217,7 +229,7 @@ async def main():
                 elif user_input.lower().startswith('user '):
                     new_user_id = user_input.split(' ', 1)[1].strip()
                     agent.user_id = new_user_id
-                    print(f"\n✓ Switched to: {new_user_id}\n")
+                    print(f"\n✓ Manually switched to: {new_user_id}\n")
                     continue
                 
                 # Process
@@ -227,6 +239,9 @@ async def main():
                 print()
                 
             except KeyboardInterrupt:
+                print("\n\nExiting gracefully...")
+                break
+            except asyncio.CancelledError:
                 print("\n\nExiting...")
                 break
             except Exception as e:

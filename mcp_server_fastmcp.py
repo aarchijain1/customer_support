@@ -19,7 +19,7 @@ mcp = FastMCP("Customer Support MCP Server")
 @mcp.tool()
 def change_password(user_id: str, new_password: str) -> dict:
     """
-    Change a user's password.
+    Change a user's password. This change is permanent.
     
     Args:
         user_id: The unique identifier for the user
@@ -31,7 +31,7 @@ def change_password(user_id: str, new_password: str) -> dict:
     success = db.change_password(user_id, new_password)
     return {
         "success": success,
-        "message": "Password changed successfully" if success else "User not found"
+        "message": "Password changed successfully and persisted" if success else "User not found"
     }
 
 
@@ -57,7 +57,7 @@ def get_account_balance(user_id: str) -> dict:
 @mcp.tool()
 def update_address(user_id: str, new_address: str) -> dict:
     """
-    Update a user's address in the system.
+    Update a user's address in the system. This change is permanent.
     
     Args:
         user_id: The unique identifier for the user
@@ -69,7 +69,7 @@ def update_address(user_id: str, new_address: str) -> dict:
     success = db.update_address(user_id, new_address)
     return {
         "success": success,
-        "message": "Address updated successfully" if success else "User not found"
+        "message": "Address updated successfully and persisted" if success else "User not found"
     }
 
 
@@ -96,7 +96,7 @@ def get_recent_transactions(user_id: str, limit: int = 10) -> dict:
 @mcp.tool()
 def deactivate_card(user_id: str) -> dict:
     """
-    Deactivate a user's card for security purposes.
+    Deactivate a user's card for security purposes. This change is permanent.
     
     Args:
         user_id: The unique identifier for the user
@@ -107,14 +107,14 @@ def deactivate_card(user_id: str) -> dict:
     success = db.deactivate_card(user_id)
     return {
         "success": success,
-        "message": "Card deactivated successfully" if success else "User not found"
+        "message": "Card deactivated successfully and persisted" if success else "User not found"
     }
 
 
 @mcp.tool()
 def report_issue(user_id: str, issue_description: str) -> dict:
     """
-    Report a customer support issue and create a ticket.
+    Report a customer support issue and create a ticket. The ticket is permanently stored.
     
     Args:
         user_id: The unique identifier for the user
@@ -127,14 +127,14 @@ def report_issue(user_id: str, issue_description: str) -> dict:
     return {
         "success": True,
         "issue_id": issue_id,
-        "message": f"Issue reported successfully. Ticket ID: {issue_id}"
+        "message": f"Issue reported successfully and stored. Ticket ID: {issue_id}"
     }
 
 
 @mcp.tool()
 def get_account_details(user_id: str) -> dict:
     """
-    Retrieve comprehensive account details for a user.
+    Retrieve comprehensive account details for a user, including any recent updates.
     
     Args:
         user_id: The unique identifier for the user
@@ -146,8 +146,23 @@ def get_account_details(user_id: str) -> dict:
     return {
         "success": details is not None,
         "details": details,
-        "message": "Account details retrieved" if details else "User not found"
+        "message": "Account details retrieved (includes any updates)" if details else "User not found"
     }
+
+
+@mcp.tool()
+def switch_user(new_user_id: str) -> dict:
+    """
+    Switch to a different user account.
+    
+    Args:
+        new_user_id: The user ID to switch to (e.g., user_001, user_002)
+    
+    Returns:
+        dict: Success status, user info, and message
+    """
+    result = db.switch_user(new_user_id)
+    return result
 
 
 if __name__ == "__main__":
@@ -155,6 +170,7 @@ if __name__ == "__main__":
     print("=" * 60)
     print("Starting FastMCP Server...")
     print("=" * 60)
-    print("\nServer is running with 7 tools")
+    print("\nServer is running with 8 tools")
+    print("All changes are PERSISTENT (saved to database.json)")
     print("Press CTRL+C to stop\n")
     mcp.run()
